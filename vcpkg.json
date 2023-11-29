@@ -1,0 +1,10 @@
+{
+  "dependencies": [
+    {
+      "name": "eigen3"
+    },
+    {
+      "name": "libigl"
+    }
+  ]
+}
