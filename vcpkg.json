@@ -4,7 +4,14 @@
       "name": "eigen3"
     },
     {
-      "name": "libigl"
+      "name": "libigl",
+      "features": [
+        "glfw",
+        "imgui",
+        "opengl",
+        "xml",
+        "embree"
+      ]
     }
   ]
 }
