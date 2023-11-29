@@ -1,5 +1,5 @@
 vcpkg/
 cmake-build-debug/
 build/
-.idea/
+.*/
 vcpkg_installed/
