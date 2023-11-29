@@ -9,8 +9,7 @@
         "glfw",
         "imgui",
         "opengl",
-        "xml",
-        "embree"
+        "xml"
       ]
     }
   ]

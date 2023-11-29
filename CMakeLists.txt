@@ -5,10 +5,10 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake)
 
 IF (UNIX)
     MESSAGE(STATUS "current platform: Linux ")
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/x64-linux/include")
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/build/vcpkg_installed/x64-linux/include")
 ELSEIF (WIN32)
     MESSAGE(STATUS "current platform: Windows")
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/x64-windows/include")
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/build/vcpkg_installed/x64-windows/include")
 ENDIF ()
 
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
