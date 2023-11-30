@@ -60,7 +60,7 @@ jobs:
     - name: Install depandencies
       run: |
         if [ "$RUNNER_OS" == "Linux" ]; then
-              apt install git build-essential cmake libx11-dev mesa-common-dev libgl1-mesa-dev libglu1-mesa-dev randr-dev libxi-dev libxmu-dev libblas-dev libxinerama-dev libxcursor-dev
+              sudo apt install git build-essential cmake libx11-dev mesa-common-dev libgl1-mesa-dev libglu1-mesa-dev randr-dev libxi-dev libxmu-dev libblas-dev libxinerama-dev libxcursor-dev
         else
               echo "$RUNNER_OS not listed"
         fi
