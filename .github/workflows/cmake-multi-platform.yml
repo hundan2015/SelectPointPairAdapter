@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-
+    
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: false
@@ -57,7 +57,14 @@ jobs:
   
     - name: Set vcpkg
       run: git submodule update --init
-      
+    - name: Install depandencies
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+              apt install git build-essential cmake libx11-dev mesa-common-dev libgl1-mesa-dev libglu1-mesa-dev randr-dev libxi-dev libxmu-dev libblas-dev libxinerama-dev libxcursor-dev
+        else
+              echo "$RUNNER_OS not listed"
+        fi
+      shell: bash
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
