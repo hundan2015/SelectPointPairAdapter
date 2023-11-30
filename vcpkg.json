@@ -11,6 +11,9 @@
         "opengl",
         "xml"
       ]
+    },
+    {
+      "name": "glad"
     }
   ]
 }
