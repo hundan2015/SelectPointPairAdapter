@@ -2,3 +2,5 @@ cmake-build-debug/
 build/
 .*/
 vcpkg_installed/
+*.off
+!.github/

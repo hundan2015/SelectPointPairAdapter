@@ -12,12 +12,12 @@ ELSEIF (WIN32)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/build/vcpkg_installed/x64-windows/include")
     # HACK: Unknown include directories for ninja with GCC. If you are working in windows, 
     # using Ninja with MSVC when you hoping have the common_compile.js or using MSVC directly.
-    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/build/vcpkg_installed/x64-mingw-dynamic/include")
+    # include_directories("${CMAKE_CURRENT_SOURCE_DIR}/build/vcpkg_installed/x64-mingw-dynamic/include")
 ENDIF ()
 
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 MESSAGE(STATUS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
-set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_STANDARD 17)
 
 add_executable(SelectPointPairAdapter main.cpp)
 
