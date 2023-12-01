@@ -27,3 +27,6 @@ target_link_libraries(SelectPointPairAdapter PRIVATE Eigen3::Eigen)
 find_package(libigl CONFIG REQUIRED)
 target_link_libraries(SelectPointPairAdapter PRIVATE igl::igl_xml igl::igl_core igl::igl_glfw igl::igl_imgui)
 
+find_package(args CONFIG REQUIRED)
+target_link_libraries(SelectPointPairAdapter PRIVATE taywee::args)
+

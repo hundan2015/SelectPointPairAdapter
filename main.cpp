@@ -2,6 +2,7 @@
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/point_mesh_squared_distance.h>
 
+#include <args.hxx>
 #include <iostream>
 #include <ostream>
 #include <vector>
@@ -12,7 +13,28 @@ using namespace Eigen;
 using std::cout;
 using std::vector;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
+    args::ArgumentParser parser(
+        "A simple program for wrap4d coordinates transfer.");
+    args::HelpFlag(parser, "help",
+                   "If you need help, check below:", {'h', "help"});
+    args::Group group(
+        parser, "This group is all exclusive:", args::Group::Validators::AllOrNone);
+    args::Flag isUsingGUI(group, "gui", "The GUI flag.", {'g', "gui"});
+    try {
+        parser.ParseCLI(argc, argv);
+    } catch (const args::Completion& e) {
+        std::cout << e.what();
+        return 0;
+    } catch (const args::ParseError& e) {
+        std::cerr << e.what() << std::endl;
+        std::cerr << parser;
+        return 1;
+    } catch (const args::Help&) {
+        std::cout << parser;
+        return 0;
+    }
+
     Eigen::MatrixXd inputModelVertices;
     Eigen::MatrixXi inputModelFaces;
     // Load a mesh in OFF format
@@ -60,9 +82,12 @@ int main(int argc, char *argv[]) {
         cout << std::endl;
     }
 
+    if (isUsingGUI) {  
     // Plot the mesh
-    igl::opengl::glfw::Viewer viewer;
-    viewer.data().set_mesh(inputModelVertices, inputModelFaces);
-    viewer.data().add_points(inputPointsVertices, Eigen::RowVector3d(1, 0, 0));
-    viewer.launch();
+        igl::opengl::glfw::Viewer viewer;
+        viewer.data().set_mesh(inputModelVertices, inputModelFaces);
+        viewer.data().add_points(inputPointsVertices,
+                                 Eigen::RowVector3d(1, 0, 0));
+        viewer.launch();
+    }
 }
