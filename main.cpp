@@ -4,8 +4,12 @@
 #include <igl/readOBJ.h>
 
 #include <args.hxx>
+#include <exception>
+#include <fstream>
+#include <ios>
 #include <iostream>
 #include <ostream>
+#include <string>
 #include <tuple>
 #include <vector>
 #include <nlohmann/json.hpp>
@@ -17,7 +21,7 @@ using namespace Eigen;
 using std::cout;
 using std::vector;
 
-void process_barycentric(const Eigen::MatrixXd& inputModelVertices,
+json process_barycentric(const Eigen::MatrixXd& inputModelVertices,
                          const Eigen::MatrixXi& inputModelFaces,
                          const Eigen::MatrixXd& inputPointsVertices) {
     // Load a mesh in OFF format
@@ -50,8 +54,8 @@ void process_barycentric(const Eigen::MatrixXd& inputModelVertices,
     // Output part
     json jVector(shit);
     cout << jVector;
+    return jVector;
 }
-
 
 // Struct to transfer off to json easily
 struct vertex {
@@ -60,7 +64,7 @@ struct vertex {
     double z;
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(vertex, x, y, x);
-void transfer_off_json(const Eigen::MatrixXd& inputPointsVertices) {
+json transfer_off_json(const Eigen::MatrixXd& inputPointsVertices) {
     vector<vertex> result;
     for (int i = 0; i < inputPointsVertices.cols(); ++i) {
         result.push_back({inputPointsVertices(i, 0), inputPointsVertices(i, 1),
@@ -69,13 +73,33 @@ void transfer_off_json(const Eigen::MatrixXd& inputPointsVertices) {
     json jVector(result);
     // Output part
     cout << jVector;
+    return jVector;
 }
 
+// TODO: Make a output project json function.
+json output_project_json(const std::string kLeftMeshFile,
+                         const std::string kLeftPointFile,
+                         const std::string kRightMeshFile,
+                         const std::string kRightPointFile,
+                         const bool kIsLeftUsingB = false,
+                         const bool kIsRightUsingB = false) {
+    return json();
+}
 int main(int argc, char* argv[]) {
     args::ArgumentParser parser(
         "A simple program for wrap4d coordinates transfer.");
     args::HelpFlag(parser, "help",
                    "If you need help, check below:", {'h', "help"});
+    args::Group commands(parser, "commands");
+    args::Command chroot(parser, "chroot", "change the root to specific dir.",
+                         [&](args::Subparser& subParser) {
+                             args::Positional<std::string> temp(
+                                 subParser, "root", "Root dir.");
+                             subParser.Parse();
+                             cout << args::get(temp);
+                             // auto res = output_project_json();
+                         });
+
     args::Group guiGroup(parser,
                          "If you use -g, you can view the points in imgui:",
                          args::Group::Validators::AllOrNone);
@@ -86,6 +110,12 @@ int main(int argc, char* argv[]) {
         "If you use this group, you are using the engine provided by me:");
     args::Flag isUsingInsertedEngine(
         engineGroup, "engine", "The inserted engine flag", {'e', "engine"});
+    args::Positional<std::string> bar(parser, "inputMesh",
+                                      "The input mesh file position");
+    args::Positional<std::string> foo(parser, "inputPoints",
+                                      "The input points file position");
+    args::Positional<std::string> tar(parser, "outputfile",
+                                      "The out points file position");
 
     try {
         parser.ParseCLI(argc, argv);
@@ -106,19 +136,45 @@ int main(int argc, char* argv[]) {
     Eigen::MatrixXi inputModelFaces;
     Eigen::MatrixXd inputPointsVertices;
     Eigen::MatrixXi inputPointsFaces;
+
+    std::string inputFilePosition = "./input.off";
+    if (foo) {
+        inputFilePosition = args::get(foo);
+    }
+    std::string inputMeshFilePosition = "./input.obj";
+    if (bar) {
+        inputMeshFilePosition = args::get(bar);
+    }
+    std::string outputFileLocation = "./output";
+    if (tar) {
+        outputFileLocation = args::get(tar);
+    }
     // Load Meshes
     if (isUsingGUI || isUsingInsertedEngine) {
-        igl::readOBJ("./input.obj", inputModelVertices, inputModelFaces);
+        igl::readOBJ(inputMeshFilePosition, inputModelVertices,
+                     inputModelFaces);
     }
-    igl::readOFF("./input.off", inputPointsVertices, inputPointsFaces);
+    igl::readOFF(inputFilePosition, inputPointsVertices, inputPointsFaces);
+
+    json res;
 
     if (isUsingInsertedEngine) {
-        process_barycentric(inputModelVertices, inputModelFaces,
-                            inputPointsVertices);
+        res = process_barycentric(inputModelVertices, inputModelFaces,
+                                  inputPointsVertices);
     } else {
-        transfer_off_json(inputPointsVertices);
+        res = transfer_off_json(inputPointsVertices);
+    }
+    std::fstream outputStream;
+    try {
+        outputStream.open(outputFileLocation,
+                          std::ios_base::out | std::ios_base::trunc);
+    } catch (std::exception) {
+        std::cerr << "Failed to open file.";
+        return 1;
     }
 
+    outputStream << res;
+    outputStream.close();
     if (isUsingGUI) {
         // Plot the mesh
         igl::opengl::glfw::Viewer viewer;
