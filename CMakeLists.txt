@@ -30,3 +30,5 @@ target_link_libraries(SelectPointPairAdapter PRIVATE igl::igl_xml igl::igl_core 
 find_package(args CONFIG REQUIRED)
 target_link_libraries(SelectPointPairAdapter PRIVATE taywee::args)
 
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(SelectPointPairAdapter PRIVATE nlohmann_json::nlohmann_json)
