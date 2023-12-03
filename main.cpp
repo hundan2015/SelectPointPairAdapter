@@ -8,11 +8,11 @@
 #include <fstream>
 #include <ios>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <ostream>
 #include <string>
 #include <tuple>
 #include <vector>
-#include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
 #include "igl/readOFF.h"
@@ -63,10 +63,10 @@ struct vertex {
     double y;
     double z;
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(vertex, x, y, x);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(vertex, x, y, z);
 json transfer_off_json(const Eigen::MatrixXd& inputPointsVertices) {
     vector<vertex> result;
-    for (int i = 0; i < inputPointsVertices.cols(); ++i) {
+    for (int i = 0; i < inputPointsVertices.rows(); ++i) {
         result.push_back({inputPointsVertices(i, 0), inputPointsVertices(i, 1),
                           inputPointsVertices(i, 2)});
     }
@@ -74,6 +74,53 @@ json transfer_off_json(const Eigen::MatrixXd& inputPointsVertices) {
     // Output part
     cout << jVector;
     return jVector;
+}
+
+void transfer_model(const std::string& inputFilePosition,
+                    const std::string& inputMeshFilePosition,
+                    const std::string& outputFileLocation,
+                    bool isUsingInsertedEngine, bool isUsingGUI) {
+    // Setup input mesh and points matrix
+    Eigen::MatrixXd inputModelVertices;
+    Eigen::MatrixXi inputModelFaces;
+    Eigen::MatrixXd inputPointsVertices;
+    Eigen::MatrixXi inputPointsFaces;
+    if (isUsingGUI || isUsingInsertedEngine) {
+        cout << "Reading input mesh file..." << std::endl;
+        igl::readOBJ(inputMeshFilePosition, inputModelVertices,
+                     inputModelFaces);
+    }
+    cout << "Reading input points file...:" << inputFilePosition << std::endl;
+    igl::readOFF(inputFilePosition, inputPointsVertices, inputPointsFaces);
+    cout << "Read input points success!";
+    json res;
+
+    if (isUsingInsertedEngine) {
+        res = process_barycentric(inputModelVertices, inputModelFaces,
+                                  inputPointsVertices);
+    } else {
+        // cout << "Not using engine. The input points should be:" << std::endl;
+        // cout << inputPointsVertices;
+        res = transfer_off_json(inputPointsVertices);
+    }
+    std::fstream outputStream;
+    try {
+        outputStream.open(outputFileLocation,
+                          std::ios_base::out | std::ios_base::trunc);
+    } catch (std::exception) {
+        std::cerr << "Failed to open file.";
+    }
+
+    outputStream << res;
+    outputStream.close();
+    if (isUsingGUI) {
+        // Plot the mesh
+        igl::opengl::glfw::Viewer viewer;
+        viewer.data().set_mesh(inputModelVertices, inputModelFaces);
+        viewer.data().add_points(inputPointsVertices,
+                                 Eigen::RowVector3d(1, 0, 0));
+        viewer.launch();
+    }
 }
 
 // TODO: Make a output project json function.
@@ -90,7 +137,8 @@ int main(int argc, char* argv[]) {
         "A simple program for wrap4d coordinates transfer.");
     args::HelpFlag(parser, "help",
                    "If you need help, check below:", {'h', "help"});
-    args::Group commands(parser, "commands");
+    args::Group commands(parser, "commands",
+                         args::Group::Validators::AllOrNone);
     args::Command chroot(parser, "chroot", "change the root to specific dir.",
                          [&](args::Subparser& subParser) {
                              args::Positional<std::string> temp(
@@ -99,24 +147,53 @@ int main(int argc, char* argv[]) {
                              cout << args::get(temp);
                              // auto res = output_project_json();
                          });
+    args::Command transfer(
+        parser, "transfer", "transfer file itself.",
+        [&](args::Subparser& subParser) {
+            args::Group guiGroup(
+                subParser, "If you use -g, you can view the points in imgui:");
+            args::Flag isUsingGUI(guiGroup, "gui", "The GUI flag.",
+                                  {'g', "gui"});
 
-    args::Group guiGroup(parser,
-                         "If you use -g, you can view the points in imgui:",
-                         args::Group::Validators::AllOrNone);
-    args::Flag isUsingGUI(guiGroup, "gui", "The GUI flag.", {'g', "gui"});
+            /*args::Group engineGroup(subParser,
+                                    "If you use this group, you are using the "
+                                    "engine provided by me:");*/
+            args::Flag isUsingInsertedEngine(guiGroup, "engine",
+                                             "The inserted engine flag",
+                                             {'e', "engine"});
+            args::Positional<std::string> bar(subParser, "inputMesh",
+                                              "The input mesh file position");
+            args::Positional<std::string> foo(subParser, "inputPoints",
+                                              "The input points file position");
+            args::Positional<std::string> tar(subParser, "outputfile",
+                                              "The out points file position");
+            subParser.Parse();
+            std::string inputFilePosition = "./input.off";
+            if (foo) {
+                inputFilePosition = args::get(foo);
+            } else {
+                cout << "No input file location!" << std::endl;
+                return;
+            }
+            std::string inputMeshFilePosition = "./input.obj";
+            if (bar) {
+                inputMeshFilePosition = args::get(bar);
+            } else {
+                cout << "No input mesh file location!" << std::endl;
+                return;
+            }
+            std::string outputFileLocation = "./output";
+            if (tar) {
+                outputFileLocation = args::get(tar);
+            } else {
+                cout << "No output file location!" << std::endl;
+                return;
+            }
 
-    args::Group engineGroup(
-        parser,
-        "If you use this group, you are using the engine provided by me:");
-    args::Flag isUsingInsertedEngine(
-        engineGroup, "engine", "The inserted engine flag", {'e', "engine"});
-    args::Positional<std::string> bar(parser, "inputMesh",
-                                      "The input mesh file position");
-    args::Positional<std::string> foo(parser, "inputPoints",
-                                      "The input points file position");
-    args::Positional<std::string> tar(parser, "outputfile",
-                                      "The out points file position");
-
+            transfer_model(inputFilePosition, inputMeshFilePosition,
+                           outputFileLocation, isUsingInsertedEngine,
+                           isUsingGUI);
+        });
     try {
         parser.ParseCLI(argc, argv);
     } catch (const args::Completion& e) {
@@ -129,58 +206,5 @@ int main(int argc, char* argv[]) {
     } catch (const args::Help&) {
         std::cout << parser;
         return 0;
-    }
-
-    // Setup input mesh and points matrix
-    Eigen::MatrixXd inputModelVertices;
-    Eigen::MatrixXi inputModelFaces;
-    Eigen::MatrixXd inputPointsVertices;
-    Eigen::MatrixXi inputPointsFaces;
-
-    std::string inputFilePosition = "./input.off";
-    if (foo) {
-        inputFilePosition = args::get(foo);
-    }
-    std::string inputMeshFilePosition = "./input.obj";
-    if (bar) {
-        inputMeshFilePosition = args::get(bar);
-    }
-    std::string outputFileLocation = "./output";
-    if (tar) {
-        outputFileLocation = args::get(tar);
-    }
-    // Load Meshes
-    if (isUsingGUI || isUsingInsertedEngine) {
-        igl::readOBJ(inputMeshFilePosition, inputModelVertices,
-                     inputModelFaces);
-    }
-    igl::readOFF(inputFilePosition, inputPointsVertices, inputPointsFaces);
-
-    json res;
-
-    if (isUsingInsertedEngine) {
-        res = process_barycentric(inputModelVertices, inputModelFaces,
-                                  inputPointsVertices);
-    } else {
-        res = transfer_off_json(inputPointsVertices);
-    }
-    std::fstream outputStream;
-    try {
-        outputStream.open(outputFileLocation,
-                          std::ios_base::out | std::ios_base::trunc);
-    } catch (std::exception) {
-        std::cerr << "Failed to open file.";
-        return 1;
-    }
-
-    outputStream << res;
-    outputStream.close();
-    if (isUsingGUI) {
-        // Plot the mesh
-        igl::opengl::glfw::Viewer viewer;
-        viewer.data().set_mesh(inputModelVertices, inputModelFaces);
-        viewer.data().add_points(inputPointsVertices,
-                                 Eigen::RowVector3d(1, 0, 0));
-        viewer.launch();
     }
 }
