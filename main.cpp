@@ -124,13 +124,42 @@ void transfer_model(const std::string& inputFilePosition,
 }
 
 // TODO: Make a output project json function.
-json output_project_json(const std::string kLeftMeshFile,
-                         const std::string kLeftPointFile,
-                         const std::string kRightMeshFile,
-                         const std::string kRightPointFile,
-                         const bool kIsLeftUsingB = false,
-                         const bool kIsRightUsingB = false) {
-    return json();
+void generate_select_pair_json(const std::string kSelectPairNodeName,
+                               const std::string kFileName,
+                               const std::string kOutFileName,
+                               const std::string kLeftPointFileName,
+                               const std::string kRightPointFileName,
+                               const bool kIsLeftUsingB = false,
+                               const bool kIsRightUsingB = false) {
+    cout << "Current wrap4d file:" << kFileName;
+    std::ifstream jsonStream(kFileName);
+    json result = json::parse(jsonStream);
+    jsonStream.close();
+    json& selectPointPair2Param =
+        result["nodes"][kSelectPairNodeName]["params"];
+    selectPointPair2Param["fileNameLeft"]["value"] =
+        "$PROJECT_DIR/" + kLeftPointFileName;
+    selectPointPair2Param["fileNameRight"]["value"] =
+        "$PROJECT_DIR/" + kRightPointFileName;
+    selectPointPair2Param["sourceLeft"]["value"] = 1;
+    selectPointPair2Param["sourceRight"]["value"] = 1;
+    if (kIsLeftUsingB) {
+        cout << "Is using left.." << std::endl;
+        selectPointPair2Param["pointsFormatLeft"]["value"] = 1;
+    } else {
+        selectPointPair2Param["pointsFormatLeft"]["value"] = 0;
+    }
+
+    if (kIsRightUsingB) {
+        cout << "Is using right.." << std::endl;
+        selectPointPair2Param["pointsFormatRight"]["value"] = 1;
+    } else {
+        selectPointPair2Param["pointsFormatRight"]["value"] = 0;
+    }
+    // result[kSelectPairNodeName]["params"] = selectPointPair2Param;
+    std::ofstream ano(kOutFileName, std::ios_base::trunc);
+    result >> ano;
+    ano.close();
 }
 int main(int argc, char* argv[]) {
     args::ArgumentParser parser(
@@ -139,14 +168,32 @@ int main(int argc, char* argv[]) {
                    "If you need help, check below:", {'h', "help"});
     args::Group commands(parser, "commands",
                          args::Group::Validators::AllOrNone);
-    args::Command chroot(parser, "chroot", "change the root to specific dir.",
-                         [&](args::Subparser& subParser) {
-                             args::Positional<std::string> temp(
-                                 subParser, "root", "Root dir.");
-                             subParser.Parse();
-                             cout << args::get(temp);
-                             // auto res = output_project_json();
-                         });
+    args::Command chroot(
+        parser, "generate", "Generate specific wrap4d project file",
+        [&](args::Subparser& subParser) {
+            args::Group isUsingBGroup(subParser, "is Using b algo?");
+            args::Flag isUsingLeft(isUsingBGroup, "engine", "The left flag",
+                                   {'l', "left"});
+            args::Flag isUsingRight(isUsingBGroup, "engine", "The right flag",
+                                    {'r', "right"});
+            args::Positional<std::string> name(subParser, "pair_name",
+                                               "Select pair node name.");
+            args::Positional<std::string> inputFile(subParser, "input_wrap",
+                                                    "Input wrap file dir");
+            args::Positional<std::string> outputFile(subParser, "output_wrap",
+                                                     "Output wrap file dir");
+            args::Positional<std::string> leftPoints(subParser, "left_points",
+                                                     "Output wrap file dir");
+            args::Positional<std::string> rightPoints(subParser, "right_points",
+                                                      "Output wrap file dir");
+            subParser.Parse();
+            generate_select_pair_json(
+                args::get(name), args::get(inputFile), args::get(outputFile),
+                args::get(leftPoints), args::get(rightPoints),
+                args::get(isUsingLeft), args::get(isUsingRight));
+            // cout << args::get(temp);
+            //  auto res = output_project_json();
+        });
     args::Command transfer(
         parser, "transfer", "transfer file itself.",
         [&](args::Subparser& subParser) {
